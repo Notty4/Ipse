@@ -90,6 +90,43 @@ gracefully, which is why it is the default, but the honest conclusion is
 that the scoring formula is not where this problem gets solved. Marker
 curation matters more.
 
+## Deriving your own markers
+
+The bundled markers are a placeholder. To build a real reference from an
+annotated dataset — run this on **control samples only**, so that labels
+can never encode disease status:
+
+```r
+candidates <- derive_markers(
+  expr   = counts,          # genes x cells, log-normalised
+  labels = meta$cell_type,
+  donor  = meta$donor,      # optional: adds donor_consistency
+  panel  = xenium_genes     # optional: restrict to what you can measure
+)
+
+# Require replication across independent cohorts
+consensus <- consensus_markers(
+  list(cohortA = cand_a, cohortB = cand_b),
+  top_n = 50, min_cohorts = 2
+)
+
+markers <- as_marker_table(
+  consensus, n = 6, min_gap = 0.3,
+  effector = c("TH", "SLC6A3", "SLC18A2"),
+  source = "Control samples, <accessions>"
+)
+```
+
+Candidates are ranked by **exclusivity**, not fold change: each cell type
+is compared against its single strongest competitor, so a gene shared by
+two lineages scores near zero however abundant it is. The default ranking
+uses detection rate (`detect_gap`) rather than expression level, because a
+gene that is abundant everywhere but slightly higher in one type still
+scores well on expression and poorly on detection — and that is precisely
+the pattern that defeats annotation in spatial data.
+
+Layer assignment is not automated: name your `effector` genes explicitly.
+
 ## Package layout
 
 - `R/` — `annotate_midbrain_cells()`, `score_markers()`,

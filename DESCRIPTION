@@ -2,7 +2,7 @@ Package: midbrainType
 Type: Package
 Title: Automated Cell Type Annotation for Midbrain Single-Cell and Spatial Data
 Version: 0.0.0.9000
-Authors@R: person("Naz", , , "you@example.com", role = c("aut", "cre"))
+Authors@R: person("Naz", , , "harrisonnott.au@gmail.com", role = c("aut", "cre"))
 Description: Assigns cell type labels to single-cell or spatial
     transcriptomic data from the midbrain, using a curated marker gene
     reference bundled inside the package. No external atlas or reference
