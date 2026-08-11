@@ -11,7 +11,7 @@ test_that("every method returns a correctly shaped score matrix", {
 test_that("every method recovers cell identity on well-separated data", {
   d <- make_expr()
   for (m in all_methods) {
-    lab <- annotate_midbrain_cells(d$expr, method = m, seed = 42)
+    lab <- annotate_cells(d$expr, method = m, seed = 42)
     expect_gt(mean(lab$cell_type == d$truth), 0.95)
   }
 })
@@ -19,7 +19,7 @@ test_that("every method recovers cell identity on well-separated data", {
 test_that("zscore tolerates marker abundance imbalance better than raw means", {
   d <- make_spillover_expr()
   acc <- function(m) {
-    mean(annotate_midbrain_cells(d$expr, method = m, seed = 42)$cell_type == d$truth)
+    mean(annotate_cells(d$expr, method = m, seed = 42)$cell_type == d$truth)
   }
   expect_gt(acc("zscore"), acc("mean_weighted"))
 })
@@ -91,6 +91,6 @@ test_that("duplicated gene symbols are rejected", {
 
 test_that("min_margin flags ambiguous cells", {
   d <- make_expr()
-  lab <- annotate_midbrain_cells(d$expr, method = "zscore", min_margin = Inf)
+  lab <- annotate_cells(d$expr, method = "zscore", min_margin = Inf)
   expect_true(all(lab$cell_type == "Ambiguous"))
 })

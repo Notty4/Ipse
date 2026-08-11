@@ -1,4 +1,4 @@
 library(testthat)
-library(midbrainType)
+library(Ipse)
 
-test_check("midbrainType")
+test_check("Ipse")

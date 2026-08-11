@@ -32,6 +32,13 @@
 #' marker driven by one donor will rank highly on `specificity` but poorly
 #' here, which is usually the more informative signal.
 #'
+#' The denominator counts only donors in which that cell type was actually
+#' present, not all donors. This matters for rare populations: a type found
+#' in two of five donors would otherwise be capped at 0.4 no matter how
+#' consistent its markers were, making a perfect rare marker look
+#' unreliable. `n_donors` reports that denominator, so a consistency of 1.0
+#' over two donors can be told apart from 1.0 over five.
+#'
 #' @param expr A genes x cells matrix (dense or sparse) of normalised,
 #'   log-transformed expression. Row names must be gene symbols.
 #' @param labels Character vector of cell type labels, one per column of
@@ -44,6 +51,12 @@
 #' @param rank_by Which statistic to rank on: `"detect_gap"` (default) or
 #'   `"specificity"`. See the section above for why detection is the safer
 #'   default.
+#' @param depth_correct Divide each cell type's detection rates by that
+#'   type's mean detection rate across all genes, before comparing. Cell
+#'   types differ in RNA content, so a deeper type detects every gene more
+#'   often -- and a type with no real markers will otherwise have
+#'   housekeeping genes promoted as markers, which corrupts annotation for
+#'   every other type. On by default; set `FALSE` to see the raw rates.
 #' @param min_cells Cell types with fewer cells than this are dropped, with
 #'   a warning.
 #' @param min_detect Minimum detection rate within the type for a gene to
@@ -74,6 +87,7 @@ derive_markers <- function(expr,
                            donor = NULL,
                            panel = NULL,
                            rank_by = c("detect_gap", "specificity"),
+                           depth_correct = TRUE,
                            min_cells = 20,
                            min_detect = 0.1) {
   rank_by <- match.arg(rank_by)
@@ -112,12 +126,16 @@ derive_markers <- function(expr,
   }
 
   stats_by_type <- .type_summaries(expr, labels, types)
+  if (depth_correct) stats_by_type <- .depth_correct(stats_by_type)
   out <- .rank_specificity(stats_by_type, types, min_detect)
 
   if (!is.null(donor)) {
-    out$donor_consistency <- .donor_consistency(expr, labels, donor, types, out)
+    dc <- .donor_consistency(expr, labels, donor, types, out)
+    out$donor_consistency <- dc$consistency
+    out$n_donors <- dc$n_donors
   } else {
     out$donor_consistency <- NA_real_
+    out$n_donors <- NA_integer_
   }
 
   out <- out[order(out$cell_type, -out[[rank_by]]), , drop = FALSE]
@@ -126,6 +144,31 @@ derive_markers <- function(expr,
   attr(out, "rank_by") <- rank_by
   rownames(out) <- NULL
   out
+}
+
+#' Divide out each cell type's overall detection rate
+#'
+#' Cell types differ in RNA content -- neurons carry far more than glia --
+#' so a deeper type detects *every* gene more often, including genes that
+#' mark nothing. Left uncorrected, detection-based ranking favours whichever
+#' type has the most RNA, and for a type with no genuine markers it will
+#' manufacture some out of housekeeping genes, which then attract cells from
+#' other types at annotation time.
+#'
+#' Dividing each type's detection rates by that type's mean detection rate
+#' across all genes removes the depth component while preserving genuine
+#' differences between genes.
+#' @keywords internal
+#' @noRd
+.depth_correct <- function(s) {
+  depth <- colMeans(s$detect, na.rm = TRUE)
+  depth[depth < .Machine$double.eps] <- 1
+  s$detect <- sweep(s$detect, 2, depth, "/")
+
+  # Rescale so values stay interpretable as rates rather than ratios
+  s$detect <- s$detect * mean(depth)
+  s$detect[s$detect > 1] <- 1
+  s
 }
 
 #' Mean expression and detection rate per gene per cell type
@@ -184,14 +227,18 @@ derive_markers <- function(expr,
   donors <- unique(donor[!is.na(donor)])
   key <- paste(candidates$cell_type, candidates$gene, sep = "\r")
   hits <- stats::setNames(numeric(length(key)), key)
-  usable <- 0L
+
+  # Denominator is per cell type, not global: a type present in only two of
+  # five donors can never exceed 0.4 if scored against all donors, which
+  # makes a perfectly consistent rare marker look unreliable.
+  present <- stats::setNames(integer(length(types)), types)
 
   for (d in donors) {
     in_d <- donor == d & !is.na(donor)
     d_types <- types[vapply(types, function(t) sum(labels[in_d] == t, na.rm = TRUE),
                             integer(1)) >= 3]
     if (length(d_types) < 2) next
-    usable <- usable + 1L
+    present[d_types] <- present[d_types] + 1L
 
     s <- .type_summaries(expr[, in_d, drop = FALSE], labels[in_d], d_types)
     for (t in d_types) {
@@ -204,10 +251,17 @@ derive_markers <- function(expr,
     }
   }
 
+  usable <- sum(present > 0)
   if (usable == 0) {
     warning("No donor had enough cells in two or more cell types; ",
             "donor_consistency is NA.", call. = FALSE)
-    return(rep(NA_real_, length(key)))
+    return(list(consistency = rep(NA_real_, length(key)),
+                n_donors = rep(NA_integer_, length(key))))
   }
-  as.numeric(hits[key]) / usable
+
+  denom <- present[candidates$cell_type]
+  out <- as.numeric(hits[key]) / denom
+  out[denom == 0] <- NA_real_
+
+  list(consistency = out, n_donors = as.integer(denom))
 }

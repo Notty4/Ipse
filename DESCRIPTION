@@ -1,13 +1,19 @@
-Package: midbrainType
+Package: Ipse
 Type: Package
-Title: Automated Cell Type Annotation for Midbrain Single-Cell and Spatial Data
+Title: Layered Cell Type Annotation for Single-Cell and Spatial Data
 Version: 0.0.0.9000
-Authors@R: person("Naz", , , "harrisonnott.au@gmail.com", role = c("aut", "cre"))
+Authors@R: person("Harrison", , , "harrisonnott.au@gmail.com", role = c("aut", "cre"))
 Description: Assigns cell type labels to single-cell or spatial
-    transcriptomic data from the midbrain, using a curated marker gene
-    reference bundled inside the package. No external atlas or reference
-    download is required. Intended to be extended to further brain regions
-    over time; this release covers the midbrain only.
+    transcriptomic data from a marker gene reference bundled inside the
+    package, with no external atlas or reference download required.
+    Markers are layered so that lineage identity, functional programme,
+    and condition-associated state are scored separately: labels are
+    assigned from identity markers alone, so an annotation can never
+    encode disease status, and a cell that retains its lineage while
+    losing its effector programme is described rather than mislabelled.
+    Condition signatures are opt-in, named, and carry their source.
+    Includes tools for deriving markers from annotated reference data.
+    Ships a midbrain reference; further regions are planned.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -25,5 +31,5 @@ Suggests:
     rmarkdown
 Config/testthat/edition: 3
 VignetteBuilder: knitr
-URL: https://github.com/Notty4/midbrainType
-BugReports: https://github.com/Notty4/midbrainType/issues
+URL: https://github.com/Notty4/Ipse
+BugReports: https://github.com/Notty4/Ipse/issues

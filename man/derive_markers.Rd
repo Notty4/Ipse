@@ -10,6 +10,7 @@ derive_markers(
   donor = NULL,
   panel = NULL,
   rank_by = c("detect_gap", "specificity"),
+  depth_correct = TRUE,
   min_cells = 20,
   min_detect = 0.1
 )
@@ -31,6 +32,13 @@ returned ranks reflect the genes you can actually measure.}
 \item{rank_by}{Which statistic to rank on: \code{"detect_gap"} (default) or
 \code{"specificity"}. See the section above for why detection is the safer
 default.}
+
+\item{depth_correct}{Divide each cell type's detection rates by that
+type's mean detection rate across all genes, before comparing. Cell
+types differ in RNA content, so a deeper type detects every gene more
+often -- and a type with no real markers will otherwise have
+housekeeping genes promoted as markers, which corrupts annotation for
+every other type. On by default; set \code{FALSE} to see the raw rates.}
 
 \item{min_cells}{Cell types with fewer cells than this are dropped, with
 a warning.}
@@ -80,6 +88,13 @@ When \code{donor} is supplied, \code{donor_consistency} reports the fraction of
 donors in which the gene remains positively specific to the type. A
 marker driven by one donor will rank highly on \code{specificity} but poorly
 here, which is usually the more informative signal.
+
+The denominator counts only donors in which that cell type was actually
+present, not all donors. This matters for rare populations: a type found
+in two of five donors would otherwise be capped at 0.4 no matter how
+consistent its markers were, making a perfect rare marker look
+unreliable. \code{n_donors} reports that denominator, so a consistency of 1.0
+over two donors can be told apart from 1.0 over five.
 }
 
 \examples{

@@ -2,7 +2,7 @@
 #'
 #' State sections are condition-associated signatures (disease states,
 #' reactive states) that are **never scored unless you ask for them** by
-#' name via the `sections` argument of [annotate_midbrain_cells()].
+#' name via the `sections` argument of [annotate_cells()].
 #'
 #' The point of a section is interpretability: it gives a named,
 #' reference-anchored cell group that can be compared against published

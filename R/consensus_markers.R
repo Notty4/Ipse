@@ -78,7 +78,7 @@ consensus_markers <- function(candidate_list, top_n = 50, min_cohorts = NULL) {
 #' Convert marker candidates into a reference table
 #'
 #' Takes the output of [derive_markers()] or [consensus_markers()] and
-#' produces a table in the format [annotate_midbrain_cells()] expects.
+#' produces a table in the format [annotate_cells()] expects.
 #'
 #' Layer assignment is deliberately **not** automated. Whether a gene is
 #' lineage-determining (`identity`) or part of a functional programme
@@ -103,6 +103,12 @@ consensus_markers <- function(candidate_list, top_n = 50, min_cohorts = NULL) {
 #'   above the noise, rather than trusting the default.
 #' @param effector Character vector of gene symbols to assign to the
 #'   `effector` layer instead of `identity`.
+#' @param exclude Character vector of gene symbols to drop entirely,
+#'   applied **before** the top `n` are taken. This matters: removing
+#'   unwanted genes afterwards leaves that cell type with fewer markers
+#'   than the others, and a type scored on fewer markers has a noisier
+#'   score, which loses it borderline cells to better-populated types.
+#'   Excluding first keeps every cell type on a comparable footing.
 #' @param source A string recording where these markers came from — cohort,
 #'   accession, or publication. Strongly recommended.
 #'
@@ -116,14 +122,19 @@ consensus_markers <- function(candidate_list, top_n = 50, min_cohorts = NULL) {
 #'   effector = c("TH", "SLC6A3", "SLC18A2", "DDC"),
 #'   source = "Control samples, GSE178265 + GSE140231"
 #' )
-#' annotate_midbrain_cells(expr, markers = markers)
+#' annotate_cells(expr, markers = markers)
 #' }
 #' @export
 as_marker_table <- function(candidates, n = 6, min_gap = 0.1,
                             effector = character(0),
+                            exclude = character(0),
                             source = NA_character_) {
   if (!all(c("cell_type", "gene") %in% colnames(candidates))) {
     stop("`candidates` must have `cell_type` and `gene` columns.", call. = FALSE)
+  }
+
+  if (length(exclude) > 0) {
+    candidates <- candidates[!candidates$gene %in% exclude, , drop = FALSE]
   }
 
   order_col <- if ("worst_rank" %in% colnames(candidates)) "worst_rank" else "rank"

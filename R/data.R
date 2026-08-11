@@ -1,7 +1,7 @@
 #' Midbrain marker gene reference table
 #'
 #' A layered marker gene reference for major midbrain cell types, bundled
-#' with the package so that [annotate_midbrain_cells()] can run without an
+#' with the package so that [annotate_cells()] can run without an
 #' external reference download.
 #'
 #' @section Layers:
@@ -29,7 +29,7 @@
 #'   \item{layer}{Character. `"identity"`, `"effector"`, or `"state"`.}
 #'   \item{context}{Character. `"canonical"`, or a named condition for
 #'     state markers. This is the name passed to the `sections` argument
-#'     of [annotate_midbrain_cells()].}
+#'     of [annotate_cells()].}
 #'   \item{source}{Character. Where the signature came from (cohort,
 #'     accession, publication), or `NA` for canonical markers. Recorded so
 #'     that a user can judge whether a given analysis is independent of

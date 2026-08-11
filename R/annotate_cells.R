@@ -1,4 +1,4 @@
-#' Annotate midbrain cell types from expression data
+#' Annotate cell types from expression data
 #'
 #' Assigns each cell (or spot) the cell type it scores highest against, and
 #' — separately — reports how that cell's effector programme and any
@@ -29,6 +29,14 @@
 #'   call; cells below it for every cell type are labelled `"Unassigned"`.
 #' @param min_margin Minimum gap between best and second-best identity
 #'   score; cells below it are labelled `"Ambiguous"`. Default `0`.
+#' @param calibrate Put each cell type's scores on a common scale before
+#'   comparing them. `"none"` (default) compares raw scores. `"zscore"`
+#'   standardises each cell type's scores across cells; `"rank"` maps them
+#'   to `[0, 1]`. Calibration helps when cell types differ in marker count
+#'   or marker sharpness, which otherwise biases assignment toward the type
+#'   with the crispest markers — but it makes assignment depend on the
+#'   composition of `expr`, so a type absent from your data will still
+#'   receive cells. Benchmark it with [benchmark_methods()].
 #' @param sections Which state sections to run, by name — e.g.
 #'   `"SCZ"`, or `c("SCZ", "reactive")`. Sections are **opt-in**: the
 #'   default `NULL` runs none, so no condition-associated signature is
@@ -53,33 +61,37 @@
 #'
 #' @examples
 #' \dontrun{
-#' labels <- annotate_midbrain_cells(expr_matrix, seed = 42)
+#' labels <- annotate_cells(expr_matrix, seed = 42)
 #' table(labels$cell_type)
 #'
 #' # Cells that kept lineage identity but lost the effector programme
 #' subset(labels, cell_type == "Dopaminergic neuron" & effector_score < 0)
 #'
 #' # Opt in to a named section, then inspect its provenance
-#' labels <- annotate_midbrain_cells(expr_matrix, sections = "reactive")
+#' labels <- annotate_cells(expr_matrix, sections = "reactive")
 #' attr(labels, "sections")
 #' }
 #' @export
-annotate_midbrain_cells <- function(expr,
+annotate_cells <- function(expr,
                                     markers = midbrain_markers,
                                     method = c("zscore", "ucell", "control", "mean_weighted"),
                                     min_score = -Inf,
                                     min_margin = 0,
+                                    calibrate = c("none", "zscore", "rank"),
                                     sections = NULL,
                                     score_effector = TRUE,
                                     seed = NULL,
                                     return_scores = FALSE) {
   method <- match.arg(method)
+  calibrate <- match.arg(calibrate)
   markers <- .validate_markers(markers)
 
   identity_scores <- score_markers(
     expr, markers = markers, layer = "identity",
     method = method, seed = seed
   )
+
+  identity_scores <- .calibrate_scores(identity_scores, calibrate)
 
   top_type <- apply(identity_scores, 2, function(col) {
     if (all(is.na(col))) return(NA_character_)
@@ -146,6 +158,45 @@ annotate_midbrain_cells <- function(expr,
   labels
 }
 
+#' Put each cell type's scores on a common scale before comparing them
+#'
+#' Raw scores are not comparable across cell types: a type with more
+#' markers, or sharper ones, produces a score on a different scale, and
+#' `which.max` treats those scales as equivalent. In practice this loses
+#' borderline cells from whichever type has the fewest or blurriest
+#' markers -- typically an abundant type whose markers are flattened by
+#' ambient contamination.
+#'
+#' The cost is that calibration makes assignment depend on which cells are
+#' in the matrix, since each type's scores are rescaled against the cells
+#' present. That is the same trade-off `zscore` already carries, but it now
+#' applies to every method, and it means a dataset genuinely lacking a cell
+#' type will still have cells assigned to it. Benchmark rather than assume.
+#' @keywords internal
+#' @noRd
+.calibrate_scores <- function(scores, how) {
+  if (identical(how, "none")) return(scores)
+
+  out <- scores
+  for (i in seq_len(nrow(scores))) {
+    x <- scores[i, ]
+    if (all(is.na(x))) next
+
+    if (identical(how, "zscore")) {
+      mu <- mean(x, na.rm = TRUE)
+      sdev <- stats::sd(x, na.rm = TRUE)
+      if (is.na(sdev) || sdev < .Machine$double.eps) sdev <- 1
+      out[i, ] <- (x - mu) / sdev
+    } else {
+      # rank: map to [0, 1] within the cell type, robust to outliers and
+      # to differences in the shape of each type's score distribution
+      r <- rank(x, na.last = "keep", ties.method = "average")
+      out[i, ] <- (r - 1) / max(sum(!is.na(x)) - 1, 1)
+    }
+  }
+  out
+}
+
 #' Pull each cell's score for the cell type it was assigned
 #'
 #' A signature marked `"Any"` applies to every cell type; otherwise a cell
@@ -172,9 +223,9 @@ annotate_midbrain_cells <- function(expr,
 #'   actually determines labels.
 #' @return A character vector of unique cell type labels.
 #' @examples
-#' list_midbrain_cell_types()
+#' list_cell_types()
 #' @export
-list_midbrain_cell_types <- function(markers = midbrain_markers,
+list_cell_types <- function(markers = midbrain_markers,
                                      layer = "identity") {
   markers <- .validate_markers(markers)
   if (!is.null(layer)) markers <- markers[markers$layer %in% layer, , drop = FALSE]

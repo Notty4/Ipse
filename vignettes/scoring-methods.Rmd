@@ -12,7 +12,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
 ```{r setup}
-library(midbrainType)
+library(Ipse)
 ```
 
 ## Why the method matters
@@ -87,7 +87,7 @@ case where z-scoring has little variation to work with.
 Rather than forcing every cell into a category, use the two thresholds:
 
 ```{r thresholds, eval = FALSE}
-labels <- annotate_midbrain_cells(
+labels <- annotate_cells(
   expr,
   min_score  = 0,    # cell must beat its background -> else "Unassigned"
   min_margin = 0.1   # top two types must be separated -> else "Ambiguous"

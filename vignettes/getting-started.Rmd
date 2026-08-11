@@ -1,8 +1,8 @@
 ---
-title: "Getting started with midbrainType"
+title: "Getting started with Ipse"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Getting started with midbrainType}
+  %\VignetteIndexEntry{Getting started with Ipse}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -15,12 +15,12 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
-library(midbrainType)
+library(Ipse)
 ```
 
 ## What this package does
 
-`midbrainType` assigns a cell type label to each cell (or spot) in an
+`Ipse` assigns a cell type label to each cell (or spot) in an
 expression matrix, using a marker gene reference bundled inside the
 package — no external atlas download required. This vignette walks through
 the basic workflow on a small simulated dataset; swap in your own
@@ -48,7 +48,7 @@ expr[da_genes, 1:5] <- expr[da_genes, 1:5] + 15
 ## Annotating cells
 
 ```{r annotate}
-labels <- annotate_midbrain_cells(expr)
+labels <- annotate_cells(expr)
 table(labels$cell_type)
 head(labels)
 ```
@@ -66,13 +66,13 @@ scores[, 1:5]
 ## What cell types are covered?
 
 ```{r list-types}
-list_midbrain_cell_types()
+list_cell_types()
 ```
 
 ## Next steps
 
 - Replace `data-raw/prepare_markers.R` with a curated marker list for your
   use case
-- Try `annotate_midbrain_cells(expr, min_score = ...)` to flag
+- Try `annotate_cells(expr, min_score = ...)` to flag
   low-confidence calls as `"Unassigned"` instead of forcing every cell into
   a category

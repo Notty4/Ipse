@@ -2,7 +2,7 @@
 #'
 #' Computes a per-cell-type score for every cell in an expression matrix,
 #' from a marker gene reference table. This is the scoring engine behind
-#' [annotate_midbrain_cells()]; call it directly if you want raw scores
+#' [annotate_cells()]; call it directly if you want raw scores
 #' rather than hard-assigned labels.
 #'
 #' @section Scoring methods:
@@ -98,12 +98,11 @@ score_markers <- function(expr,
   # Method-specific one-off preparation, done once rather than per cell type.
   prep <- switch(
     method,
-    zscore  = list(expr = .zscore_rows(expr)),
+    zscore  = .gene_moments(expr),
     control = .prepare_control_bins(expr, all_marker_genes, n_bins),
     ucell   = list(ranks = .rank_cells(expr, max_rank)),
     list()
   )
-  if (method == "zscore") expr <- prep$expr
 
   cell_types <- unique(markers$cell_type)
   scores <- matrix(
@@ -134,6 +133,16 @@ score_markers <- function(expr,
       next
     }
 
+    if (method == "zscore") {
+      # sum_g w_g * (x_g - mu_g)/sd_g  =  (w/sd) . x  -  sum(w * mu/sd)
+      # Computing it this way keeps `expr` sparse: subtracting the mean
+      # would otherwise fill every zero and densify the whole matrix.
+      w_scaled <- weights / prep$sdev[genes]
+      offset <- sum(w_scaled * prep$mu[genes])
+      scores[ct, ] <- as.numeric(crossprod(expr[genes, , drop = FALSE], w_scaled)) - offset
+      next
+    }
+
     marker_score <- as.numeric(crossprod(expr[genes, , drop = FALSE], weights))
 
     if (method == "control" && !is.null(prep$bins)) {
@@ -150,25 +159,23 @@ score_markers <- function(expr,
   scores
 }
 
-#' Standardise each gene (row) across cells
+#' Per-gene mean and standard deviation, computed without densifying
 #'
-#' Zero-variance genes are returned as all-zero rather than `NaN`.
+#' Zero-variance genes get an sd of 1 and a mean of 0 so they contribute
+#' nothing rather than producing `NaN`.
 #' @keywords internal
 #' @noRd
-.zscore_rows <- function(expr) {
+.gene_moments <- function(expr) {
   mu <- Matrix::rowMeans(expr)
-  # var = E[x^2] - E[x]^2, computed this way to stay sparse-friendly
   sq <- Matrix::rowMeans(expr * expr)
-  sdev <- sqrt(pmax(sq - mu^2, 0)) * sqrt(ncol(expr) / max(ncol(expr) - 1, 1))
+  n <- ncol(expr)
+  sdev <- sqrt(pmax(sq - mu^2, 0)) * sqrt(n / max(n - 1, 1))
 
   zero_var <- sdev < .Machine$double.eps
   sdev[zero_var] <- 1
+  mu[zero_var] <- 0
 
-  out <- as.matrix(expr)
-  out <- (out - mu) / sdev
-  out[zero_var, ] <- 0
-  dimnames(out) <- dimnames(expr)
-  out
+  list(mu = mu, sdev = sdev)
 }
 
 #' Bin genes by mean expression to build a control gene pool
@@ -255,6 +262,14 @@ score_markers <- function(expr,
   }
   if (is.null(rownames(expr))) {
     stop("`expr` must have gene symbols as row names.", call. = FALSE)
+  }
+  if (ncol(expr) == 0) {
+    stop("`expr` has no cells (zero columns). If you subset by a label ",
+         "vector, check that any cells passed the filter -- e.g. ",
+         "sum(!is.na(labels)).", call. = FALSE)
+  }
+  if (nrow(expr) == 0) {
+    stop("`expr` has no genes (zero rows).", call. = FALSE)
   }
   if (is.null(colnames(expr))) {
     stop("`expr` must have cell IDs as column names.", call. = FALSE)

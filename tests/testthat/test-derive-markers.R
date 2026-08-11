@@ -119,7 +119,7 @@ test_that("consensus_markers rejects a malformed candidate table", {
   )
 })
 
-test_that("as_marker_table produces a table annotate_midbrain_cells accepts", {
+test_that("as_marker_table produces a table annotate_cells accepts", {
   r <- make_reference()
   cand <- derive_markers(r$expr, r$labels)
   mk <- as_marker_table(cand, n = 3, min_gap = 0.3, source = "test fixture")
@@ -128,7 +128,7 @@ test_that("as_marker_table produces a table annotate_midbrain_cells accepts", {
                   %in% names(mk)))
   expect_true(all(table(mk$cell_type) <= 3))
 
-  labels <- annotate_midbrain_cells(r$expr, markers = mk, seed = 42)
+  labels <- annotate_cells(r$expr, markers = mk, seed = 42)
   expect_equal(nrow(labels), ncol(r$expr))
   # the derived markers should recover the cell types they were derived from
   expect_gt(mean(labels$cell_type == r$labels), 0.9)
@@ -180,4 +180,44 @@ test_that("min_gap errors rather than returning an empty table", {
     suppressWarnings(as_marker_table(cand, n = 3, min_gap = 0.99)),
     "No candidates passed"
   )
+})
+
+test_that("depth correction stops a high-RNA cell type manufacturing markers", {
+  # A cell type with no genuine markers, but 3x the RNA content of the
+  # others, will otherwise have background genes promoted as markers --
+  # which then attract cells away from every other type at annotation time.
+  set.seed(9)
+  types <- c("Deep", "A", "B", "C")
+  n <- 1200
+  truth <- rep(types, each = n / 4)
+
+  mk <- c(paste0("A_", 1:5), paste0("B_", 1:5), paste0("C_", 1:5))
+  bg <- paste0("BG", 1:200)
+  all_genes <- c(mk, bg)
+
+  lam <- matrix(0.3, length(all_genes), n, dimnames = list(all_genes, paste0("c", 1:n)))
+  for (t in c("A", "B", "C")) lam[paste0(t, "_", 1:5), truth == t] <- 10
+  lam <- sweep(lam, 2, ifelse(truth == "Deep", 3.0, 1.0), "*")
+  expr <- log1p(matrix(stats::rpois(length(lam), lam), nrow = nrow(lam),
+                       dimnames = dimnames(lam)))
+
+  raw <- derive_markers(expr, truth, depth_correct = FALSE)
+  fixed <- derive_markers(expr, truth, depth_correct = TRUE)
+
+  spurious_raw <- max(raw$detect_gap[raw$cell_type == "Deep"])
+  spurious_fixed <- max(fixed$detect_gap[fixed$cell_type == "Deep"])
+  genuine_fixed <- max(fixed$detect_gap[fixed$gene %in% paste0("A_", 1:5) &
+                                          fixed$cell_type == "A"])
+
+  expect_lt(spurious_fixed, spurious_raw / 2)
+  # and a real marker must remain clearly above the spurious ceiling
+  expect_gt(genuine_fixed, spurious_fixed * 3)
+})
+
+test_that("depth correction leaves genuine markers ranked first", {
+  r <- make_reference()
+  cand <- derive_markers(r$expr, r$labels, depth_correct = TRUE)
+  for (t in r$types) {
+    expect_equal(cand$gene[cand$cell_type == t & cand$rank == 1], paste0("TRUE_", t))
+  }
 })

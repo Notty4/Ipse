@@ -31,8 +31,8 @@ test_that("labels are decided by identity markers alone", {
   altered <- d$expr
   altered["MBP", ] <- altered["MBP", ] + 50
 
-  a <- annotate_midbrain_cells(d$expr, seed = 42)
-  b <- annotate_midbrain_cells(altered, seed = 42)
+  a <- annotate_cells(d$expr, seed = 42)
+  b <- annotate_cells(altered, seed = 42)
   expect_equal(a$cell_type, b$cell_type)
 })
 
@@ -41,26 +41,26 @@ test_that("state markers never contribute to the assigned label", {
   altered <- d$expr
   altered[c("GFAP", "VIM"), ] <- altered[c("GFAP", "VIM"), ] + 50
 
-  a <- annotate_midbrain_cells(d$expr, seed = 42)
-  b <- annotate_midbrain_cells(altered, seed = 42)
+  a <- annotate_cells(d$expr, seed = 42)
+  b <- annotate_cells(altered, seed = 42)
   expect_equal(a$cell_type, b$cell_type)
 })
 
 test_that("effector score is returned by default", {
   d <- make_expr()
-  labels <- annotate_midbrain_cells(d$expr, seed = 42)
+  labels <- annotate_cells(d$expr, seed = 42)
   expect_true("effector_score" %in% names(labels))
 })
 
 test_that("score_effector = FALSE omits the effector column", {
   d <- make_expr()
-  labels <- annotate_midbrain_cells(d$expr, score_effector = FALSE, seed = 42)
+  labels <- annotate_cells(d$expr, score_effector = FALSE, seed = 42)
   expect_false("effector_score" %in% names(labels))
 })
 
 test_that("lost effector programme is detected while identity is retained", {
   d <- make_lineage_shift_expr()
-  labels <- annotate_midbrain_cells(d$expr, seed = 42)
+  labels <- annotate_cells(d$expr, seed = 42)
 
   # affected cells keep their dopaminergic label ...
   expect_true(all(labels$cell_type[d$affected] == "Dopaminergic neuron"))
@@ -72,7 +72,7 @@ test_that("lost effector programme is detected while identity is retained", {
 
 test_that("effector score is NA for cell types lacking effector markers", {
   d <- make_expr()
-  labels <- annotate_midbrain_cells(d$expr, seed = 42)
+  labels <- annotate_cells(d$expr, seed = 42)
   # OPC has identity markers only in the bundled reference
   opc <- labels$cell_type == "OPC"
   if (any(opc)) expect_true(all(is.na(labels$effector_score[opc])))
@@ -86,7 +86,7 @@ test_that("a shared 'Any' state signature applies to every cell type", {
                context = "shared", source = "test fixture", weight = 1,
                stringsAsFactors = FALSE)
   )
-  labels <- annotate_midbrain_cells(d$expr, markers = shared,
+  labels <- annotate_cells(d$expr, markers = shared,
                                     sections = "shared", seed = 42)
   expect_true("state_shared" %in% names(labels))
   expect_false(anyNA(labels$state_shared))
@@ -94,15 +94,15 @@ test_that("a shared 'Any' state signature applies to every cell type", {
 
 test_that("return_scores exposes identity, effector and state matrices", {
   d <- make_expr()
-  out <- annotate_midbrain_cells(d$expr, seed = 42, sections = "all",
+  out <- annotate_cells(d$expr, seed = 42, sections = "all",
                                  return_scores = TRUE)
   expect_true(all(c("labels", "identity", "effector", "state_reactive") %in% names(out)))
   expect_equal(ncol(out$identity), ncol(d$expr))
 })
 
-test_that("list_midbrain_cell_types reflects the identity layer", {
+test_that("list_cell_types reflects the identity layer", {
   identity_types <- unique(
     midbrain_markers$cell_type[midbrain_markers$layer == "identity"]
   )
-  expect_setequal(list_midbrain_cell_types(), identity_types)
+  expect_setequal(list_cell_types(), identity_types)
 })

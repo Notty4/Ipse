@@ -9,6 +9,7 @@ as_marker_table(
   n = 6,
   min_gap = 0.1,
   effector = character(0),
+  exclude = character(0),
   source = NA_character_
 )
 }
@@ -33,6 +34,13 @@ above the noise, rather than trusting the default.}
 \item{effector}{Character vector of gene symbols to assign to the
 \code{effector} layer instead of \code{identity}.}
 
+\item{exclude}{Character vector of gene symbols to drop entirely,
+applied \strong{before} the top \code{n} are taken. This matters: removing
+unwanted genes afterwards leaves that cell type with fewer markers
+than the others, and a type scored on fewer markers has a noisier
+score, which loses it borderline cells to better-populated types.
+Excluding first keeps every cell type on a comparable footing.}
+
 \item{source}{A string recording where these markers came from — cohort,
 accession, or publication. Strongly recommended.}
 }
@@ -42,7 +50,7 @@ A data frame with \code{cell_type}, \code{gene}, \code{layer}, \code{context},
 }
 \description{
 Takes the output of \code{\link[=derive_markers]{derive_markers()}} or \code{\link[=consensus_markers]{consensus_markers()}} and
-produces a table in the format \code{\link[=annotate_midbrain_cells]{annotate_midbrain_cells()}} expects.
+produces a table in the format \code{\link[=annotate_cells]{annotate_cells()}} expects.
 }
 \details{
 Layer assignment is deliberately \strong{not} automated. Whether a gene is
@@ -59,6 +67,6 @@ markers <- as_marker_table(
   effector = c("TH", "SLC6A3", "SLC18A2", "DDC"),
   source = "Control samples, GSE178265 + GSE140231"
 )
-annotate_midbrain_cells(expr, markers = markers)
+annotate_cells(expr, markers = markers)
 }
 }

@@ -12,7 +12,7 @@ A data frame with one row per (cell type, marker gene) pair:
 \item{layer}{Character. \code{"identity"}, \code{"effector"}, or \code{"state"}.}
 \item{context}{Character. \code{"canonical"}, or a named condition for
 state markers. This is the name passed to the \code{sections} argument
-of \code{\link[=annotate_midbrain_cells]{annotate_midbrain_cells()}}.}
+of \code{\link[=annotate_cells]{annotate_cells()}}.}
 \item{source}{Character. Where the signature came from (cohort,
 accession, publication), or \code{NA} for canonical markers. Recorded so
 that a user can judge whether a given analysis is independent of
@@ -30,7 +30,7 @@ midbrain_markers
 }
 \description{
 A layered marker gene reference for major midbrain cell types, bundled
-with the package so that \code{\link[=annotate_midbrain_cells]{annotate_midbrain_cells()}} can run without an
+with the package so that \code{\link[=annotate_cells]{annotate_cells()}} can run without an
 external reference download.
 }
 \section{Layers}{

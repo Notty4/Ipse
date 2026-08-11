@@ -18,7 +18,7 @@ pass to \code{sections}), \code{cell_types} it applies to, \code{n_genes}, and
 \description{
 State sections are condition-associated signatures (disease states,
 reactive states) that are \strong{never scored unless you ask for them} by
-name via the \code{sections} argument of \code{\link[=annotate_midbrain_cells]{annotate_midbrain_cells()}}.
+name via the \code{sections} argument of \code{\link[=annotate_cells]{annotate_cells()}}.
 }
 \details{
 The point of a section is interpretability: it gives a named,

@@ -1,4 +1,4 @@
-# midbrainType
+# Ipse
 
 Automated cell type annotation for midbrain single-cell and spatial
 transcriptomic data — from a raw expression matrix straight to per-cell
@@ -21,24 +21,24 @@ provisional until that curation pass happens.
 
 ```r
 # install.packages("devtools")
-devtools::install_github("Notty4/midbrainType")
+devtools::install_github("Notty4/Ipse")
 ```
 
 ## Usage
 
 ```r
-library(midbrainType)
+library(Ipse)
 
 # expr: a genes x cells matrix of normalised expression, with gene symbols
 # as row names and cell/spot IDs as column names.
-labels <- annotate_midbrain_cells(expr)
+labels <- annotate_cells(expr)
 table(labels$cell_type)
 
 # Raw per-cell-type scores, if you want them instead of hard labels:
 scores <- score_markers(expr)
 
 # What cell types does the bundled reference cover?
-list_midbrain_cell_types()
+list_cell_types()
 ```
 
 ## How it works
@@ -61,7 +61,7 @@ never scored unless you ask for them:
 ```r
 list_state_sections()          # what is available, and where it came from
 
-labels <- annotate_midbrain_cells(expr, sections = "reactive")
+labels <- annotate_cells(expr, sections = "reactive")
 attr(labels, "sections")       # provenance travels with the result
 ```
 
@@ -73,7 +73,7 @@ alone, so annotation cannot encode condition status.
 Cells can be flagged rather than forced into a call:
 
 ```r
-labels <- annotate_midbrain_cells(
+labels <- annotate_cells(
   expr,
   min_score  = 0,    # must beat background, else "Unassigned"
   min_margin = 0.1   # top two types must separate, else "Ambiguous"
@@ -129,8 +129,8 @@ Layer assignment is not automated: name your `effector` genes explicitly.
 
 ## Package layout
 
-- `R/` — `annotate_midbrain_cells()`, `score_markers()`,
-  `list_midbrain_cell_types()`
+- `R/` — `annotate_cells()`, `score_markers()`,
+  `list_cell_types()`
 - `data/midbrain_markers.rda` — bundled marker reference
 - `data-raw/prepare_markers.R` — script that builds the bundled reference;
   edit this and re-run to update the marker list

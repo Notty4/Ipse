@@ -1,6 +1,6 @@
-test_that("annotate_midbrain_cells assigns one row per cell", {
+test_that("annotate_cells assigns one row per cell", {
   d <- make_expr()
-  labels <- annotate_midbrain_cells(d$expr, seed = 42)
+  labels <- annotate_cells(d$expr, seed = 42)
 
   expect_equal(nrow(labels), ncol(d$expr))
   expect_true(all(c("cell_id", "cell_type", "score", "margin") %in% colnames(labels)))
@@ -11,19 +11,19 @@ test_that("annotate_midbrain_cells assigns one row per cell", {
 
 test_that("known cell identities are recovered on well-separated data", {
   d <- make_expr()
-  labels <- annotate_midbrain_cells(d$expr, seed = 42)
+  labels <- annotate_cells(d$expr, seed = 42)
   expect_gt(mean(labels$cell_type == d$truth), 0.95)
 })
 
 test_that("min_score labels low-confidence cells as Unassigned", {
   d <- make_expr()
-  labels <- annotate_midbrain_cells(d$expr, min_score = Inf, seed = 42)
+  labels <- annotate_cells(d$expr, min_score = Inf, seed = 42)
   expect_true(all(labels$cell_type == "Unassigned"))
 })
 
 test_that("return_scores returns both labels and the score matrix", {
   d <- make_expr()
-  out <- annotate_midbrain_cells(d$expr, seed = 42, return_scores = TRUE)
+  out <- annotate_cells(d$expr, seed = 42, return_scores = TRUE)
 
   expect_true(all(c("labels", "identity") %in% names(out)))
   expect_equal(nrow(out$labels), ncol(d$expr))
@@ -34,7 +34,7 @@ test_that("return_scores returns both labels and the score matrix", {
 
 test_that("margin is the gap between the best and second-best score", {
   d <- make_expr(n_cells = 12)
-  out <- annotate_midbrain_cells(d$expr, seed = 42, return_scores = TRUE)
+  out <- annotate_cells(d$expr, seed = 42, return_scores = TRUE)
   expected <- apply(out$identity, 2, function(col) {
     s <- sort(col, decreasing = TRUE)
     s[1] - s[2]
@@ -62,6 +62,6 @@ test_that("a cell type with no markers present yields NA with a warning", {
   expect_true(all(is.na(s["Microglia", ])))
 })
 
-test_that("list_midbrain_cell_types returns the expected labels", {
-  expect_setequal(list_midbrain_cell_types(), unique(midbrain_markers$cell_type))
+test_that("list_cell_types returns the expected labels", {
+  expect_setequal(list_cell_types(), unique(midbrain_markers$cell_type))
 })

@@ -52,7 +52,7 @@ A cell-types x cells numeric matrix of scores. A row is all \code{NA}
 \description{
 Computes a per-cell-type score for every cell in an expression matrix,
 from a marker gene reference table. This is the scoring engine behind
-\code{\link[=annotate_midbrain_cells]{annotate_midbrain_cells()}}; call it directly if you want raw scores
+\code{\link[=annotate_cells]{annotate_cells()}}; call it directly if you want raw scores
 rather than hard-assigned labels.
 }
 \section{Scoring methods}{
