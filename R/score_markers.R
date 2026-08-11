@@ -46,8 +46,12 @@
 #'   normalised (typically log-normalised) expression values. Row names must
 #'   be gene symbols.
 #' @param markers A marker reference data frame with columns `cell_type`,
-#'   `gene`, and `weight` (see [midbrain_markers]). Defaults to the bundled
-#'   midbrain reference.
+#'   `gene`, `weight`, and optionally `layer` and `context` (see
+#'   [midbrain_markers]). Defaults to the bundled midbrain reference. A
+#'   table without `layer`/`context` is treated as all-identity.
+#' @param layer Which marker layer(s) to score: `"identity"` (the default),
+#'   `"effector"`, `"state"`, a vector of these, or `NULL` for all. See
+#'   [midbrain_markers] for what the layers mean.
 #' @param method Scoring method: `"zscore"`, `"ucell"`, `"control"`, or
 #'   `"mean_weighted"`. See Scoring methods.
 #' @param n_control Number of control genes sampled per marker gene
@@ -71,6 +75,7 @@
 #' @export
 score_markers <- function(expr,
                           markers = midbrain_markers,
+                          layer = "identity",
                           method = c("zscore", "ucell", "control", "mean_weighted"),
                           n_control = 100,
                           n_bins = 25,
@@ -79,7 +84,8 @@ score_markers <- function(expr,
   method <- match.arg(method)
 
   .validate_expr(expr)
-  .validate_markers(markers)
+  markers <- .validate_markers(markers)
+  markers <- .filter_layer(markers, layer)
 
   if (!is.null(seed)) {
     old_seed <- .capture_seed()
@@ -258,6 +264,10 @@ score_markers <- function(expr,
   }
 }
 
+#' Validate a marker table, backfilling optional columns
+#'
+#' `layer` and `context` are optional: a table without them is treated as
+#' all-identity, canonical, which keeps pre-layer marker tables working.
 #' @keywords internal
 #' @noRd
 .validate_markers <- function(markers) {
@@ -269,6 +279,31 @@ score_markers <- function(expr,
       call. = FALSE
     )
   }
+  if (is.null(markers$layer))   markers$layer <- "identity"
+  if (is.null(markers$context)) markers$context <- "canonical"
+  if (is.null(markers$source))  markers$source  <- NA_character_
+
+  valid <- c("identity", "effector", "state")
+  bad <- setdiff(unique(markers$layer), valid)
+  if (length(bad) > 0) {
+    stop(sprintf("Unknown marker layer(s): %s. Must be one of: %s",
+                 paste(bad, collapse = ", "), paste(valid, collapse = ", ")),
+         call. = FALSE)
+  }
+  markers
+}
+
+#' Subset a marker table to one or more layers
+#' @keywords internal
+#' @noRd
+.filter_layer <- function(markers, layer) {
+  if (is.null(layer)) return(markers)
+  out <- markers[markers$layer %in% layer, , drop = FALSE]
+  if (nrow(out) == 0) {
+    stop(sprintf("No markers found in layer(s): %s", paste(layer, collapse = ", ")),
+         call. = FALSE)
+  }
+  out
 }
 
 #' Rank genes within each cell, descending by expression

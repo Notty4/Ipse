@@ -5,31 +5,57 @@
 \alias{midbrain_markers}
 \title{Midbrain marker gene reference table}
 \format{
-A data frame with one row per (cell type, marker gene) pair and
-the following columns:
+A data frame with one row per (cell type, marker gene) pair:
 \describe{
-\item{cell_type}{Character. Cell type label, e.g. \code{"Dopaminergic neuron"}.}
+\item{cell_type}{Character. Cell type label, or \code{"Any"}.}
 \item{gene}{Character. Marker gene symbol.}
-\item{weight}{Numeric. Relative weight of this marker within its cell
-type's score (default 1 for all markers).}
+\item{layer}{Character. \code{"identity"}, \code{"effector"}, or \code{"state"}.}
+\item{context}{Character. \code{"canonical"}, or a named condition for
+state markers. This is the name passed to the \code{sections} argument
+of \code{\link[=annotate_midbrain_cells]{annotate_midbrain_cells()}}.}
+\item{source}{Character. Where the signature came from (cohort,
+accession, publication), or \code{NA} for canonical markers. Recorded so
+that a user can judge whether a given analysis is independent of
+the data a section was derived from.}
+\item{weight}{Numeric. Relative weight within its marker set.}
 }
 }
 \source{
-Starter set of canonical midbrain markers; not yet curated
-against a specific reference dataset. See \code{data-raw/prepare_markers.R}.
+Starter set of canonical markers, not curated against a
+reference dataset. See \code{data-raw/prepare_markers.R}, which also notes
+the circularity risk when adding disease state signatures.
 }
 \usage{
 midbrain_markers
 }
 \description{
-A marker gene reference for major midbrain cell types, bundled with the
-package so that \code{\link[=annotate_midbrain_cells]{annotate_midbrain_cells()}} can run without an external
-reference download. This is a starter set — see \code{data-raw/prepare_markers.R}
-for the build script and a note on curating it further.
+A layered marker gene reference for major midbrain cell types, bundled
+with the package so that \code{\link[=annotate_midbrain_cells]{annotate_midbrain_cells()}} can run without an
+external reference download.
 }
+\section{Layers}{
+
+Markers are separated by what they tell you about a cell:
+\describe{
+\item{\code{identity}}{Lineage-determining genes, mostly transcription
+factors. These alone decide the assigned label.}
+\item{\code{effector}}{Functional-programme genes for that lineage. These
+can be lost in disease without the cell ceasing to belong to the
+lineage, so they are scored and reported but never used to assign a
+label.}
+\item{\code{state}}{Condition-associated signatures. The \code{context} column
+names the condition (e.g. \code{"reactive"}). Use \code{cell_type = "Any"} for
+a signature that applies across all cell types.}
+}
+
+The split exists so that a label can never encode disease status: if
+disease-associated genes helped assign labels, downstream comparisons of
+cell type composition between conditions would be partly circular.
+}
+
 \examples{
 data(midbrain_markers)
-head(midbrain_markers)
-unique(midbrain_markers$cell_type)
+table(midbrain_markers$layer)
+subset(midbrain_markers, layer == "identity")
 }
 \keyword{datasets}

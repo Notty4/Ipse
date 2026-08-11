@@ -10,6 +10,8 @@ annotate_midbrain_cells(
   method = c("zscore", "ucell", "control", "mean_weighted"),
   min_score = -Inf,
   min_margin = 0,
+  sections = NULL,
+  score_effector = TRUE,
   seed = NULL,
   return_scores = FALSE
 )
@@ -18,52 +20,76 @@ annotate_midbrain_cells(
 \item{expr}{A genes x cells numeric matrix (dense or sparse \code{Matrix}) of
 normalised expression values. Row names must be gene symbols, column
 names cell/spot IDs. Pass the full matrix rather than a marker-only
-subset, so that control genes can be drawn.}
+subset.}
 
-\item{markers}{A marker reference data frame (see \link{midbrain_markers}).
-Defaults to the bundled midbrain reference.}
+\item{markers}{A marker reference data frame (see \link{midbrain_markers}).}
 
 \item{method}{Scoring method passed to \code{\link[=score_markers]{score_markers()}}.}
 
-\item{min_score}{Minimum winning score required to accept a call; cells
-scoring below this for every cell type are labelled \code{"Unassigned"}.
-Default \code{-Inf} (always call the top-scoring type). With the
-background-corrected methods, \code{0} is a natural starting threshold: it
-requires a cell to exceed its expression-matched background.}
+\item{min_score}{Minimum winning identity score required to accept a
+call; cells below it for every cell type are labelled \code{"Unassigned"}.}
 
-\item{min_margin}{Minimum gap between the best and second-best score
-required to accept a call. Cells where the top two types are within
-\code{min_margin} are labelled \code{"Ambiguous"}. Default \code{0} (no check).}
+\item{min_margin}{Minimum gap between best and second-best identity
+score; cells below it are labelled \code{"Ambiguous"}. Default \code{0}.}
 
-\item{seed}{Optional integer seed, passed to \code{\link[=score_markers]{score_markers()}}. Control
-gene sampling is random, so set this for reproducible labels.}
+\item{sections}{Which state sections to run, by name — e.g.
+\code{"SCZ"}, or \code{c("SCZ", "reactive")}. Sections are \strong{opt-in}: the
+default \code{NULL} runs none, so no condition-associated signature is
+scored unless you ask for it. Pass \code{"all"} for every section in
+\code{markers}. See \code{\link[=list_state_sections]{list_state_sections()}} for what is available and
+where each signature came from.}
 
-\item{return_scores}{If \code{TRUE}, also return the full score matrix.}
+\item{score_effector}{If \code{TRUE} (default), also score the \code{effector}
+layer and return it as a column.}
+
+\item{seed}{Optional integer seed, passed to \code{\link[=score_markers]{score_markers()}}.}
+
+\item{return_scores}{If \code{TRUE}, also return the underlying score
+matrices.}
 }
 \value{
 A data frame with one row per cell: \code{cell_id}, \code{cell_type},
-\code{score} (the winning score), and \code{margin} (gap to the runner-up). If
-\code{return_scores = TRUE}, returns \verb{list(labels = <data.frame>, scores = <matrix>)} instead.
+\code{score}, \code{margin}, \code{effector_score}, and one \verb{state_<context>} column
+per section named in \code{sections}. When any section ran, the result
+carries a \code{"sections"} attribute recording which ones and their
+sources.
+Effector and state scores are taken for the cell's \emph{assigned} cell
+type, and are \code{NA} where that type has no markers in the layer.
+If \code{return_scores = TRUE}, returns a list of \code{labels} and the score
+matrices instead.
 }
 \description{
-Assigns each cell (or spot) the cell type it scores highest against,
-using the bundled midbrain marker reference by default. No external
-atlas or reference download is required.
+Assigns each cell (or spot) the cell type it scores highest against, and
+— separately — reports how that cell's effector programme and any
+condition-associated state signatures are scoring.
 }
-\details{
-Scores are z-scored across cells by default, which makes them comparable
-across cell types whose markers differ in absolute abundance. See
-\code{\link[=score_markers]{score_markers()}} for the available methods and their trade-offs — the
-choice matters, and the right one depends on your data.
+\section{Why identity and state are kept separate}{
+
+The label is assigned from \code{identity} markers \strong{only}. Effector and
+state markers are scored and returned, but never contribute to the
+label. This is deliberate: if disease-associated genes helped decide the
+label, then the annotation would partly encode disease status, and any
+downstream comparison of cell type composition between conditions would
+be partly circular.
+
+Keeping them apart lets a cell be described as retaining its lineage
+identity while having lost its effector programme — which a single
+categorical label cannot express. For cells mid-transition, the \code{margin}
+column and the full score matrix are more informative than the label,
+and a cluster of low-margin cells concentrated in one condition is a
+result rather than a QC failure.
 }
+
 \examples{
 \dontrun{
 labels <- annotate_midbrain_cells(expr_matrix, seed = 42)
 table(labels$cell_type)
 
-# Flag weak and ambiguous calls rather than forcing every cell
-labels <- annotate_midbrain_cells(
-  expr_matrix, min_score = 0, min_margin = 0.1, seed = 42
-)
+# Cells that kept lineage identity but lost the effector programme
+subset(labels, cell_type == "Dopaminergic neuron" & effector_score < 0)
+
+# Opt in to a named section, then inspect its provenance
+labels <- annotate_midbrain_cells(expr_matrix, sections = "reactive")
+attr(labels, "sections")
 }
 }

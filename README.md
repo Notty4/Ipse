@@ -49,6 +49,27 @@ is assigned the highest-scoring type. Four scoring methods are available —
 in what they normalise against. See `vignette("scoring-methods")` for a
 benchmark and guidance on choosing.
 
+### Identity, effector, and opt-in sections
+
+Markers are layered. **Identity** markers (lineage transcription factors)
+are the only ones that assign a label. **Effector** markers score the
+functional programme separately, so a cell that retains its lineage but
+has lost that programme is described rather than mislabelled. **State**
+markers form named *sections* — condition-associated signatures that are
+never scored unless you ask for them:
+
+```r
+list_state_sections()          # what is available, and where it came from
+
+labels <- annotate_midbrain_cells(expr, sections = "reactive")
+attr(labels, "sections")       # provenance travels with the result
+```
+
+A section gives a named, reference-anchored cell group you can compare
+against published work, instead of an opaque cluster index. Sections never
+influence the assigned label — that stays derived from identity markers
+alone, so annotation cannot encode condition status.
+
 Cells can be flagged rather than forced into a call:
 
 ```r

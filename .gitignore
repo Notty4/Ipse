@@ -4,6 +4,3 @@
 .Ruserdata
 *.Rproj
 inst/doc
-.httr-oauth
-.DS_Store
-.quarto

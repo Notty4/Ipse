@@ -4,11 +4,14 @@
 \alias{list_midbrain_cell_types}
 \title{List the cell types covered by a marker reference}
 \usage{
-list_midbrain_cell_types(markers = midbrain_markers)
+list_midbrain_cell_types(markers = midbrain_markers, layer = "identity")
 }
 \arguments{
-\item{markers}{A marker reference data frame. Defaults to the bundled
-midbrain reference.}
+\item{markers}{A marker reference data frame.}
+
+\item{layer}{Restrict to cell types having markers in this layer, or
+\code{NULL} for any layer. Defaults to \code{"identity"} — the layer that
+actually determines labels.}
 }
 \value{
 A character vector of unique cell type labels.

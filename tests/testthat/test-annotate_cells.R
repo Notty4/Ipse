@@ -25,17 +25,17 @@ test_that("return_scores returns both labels and the score matrix", {
   d <- make_expr()
   out <- annotate_midbrain_cells(d$expr, seed = 42, return_scores = TRUE)
 
-  expect_named(out, c("labels", "scores"))
+  expect_true(all(c("labels", "identity") %in% names(out)))
   expect_equal(nrow(out$labels), ncol(d$expr))
-  expect_equal(ncol(out$scores), ncol(d$expr))
+  expect_equal(ncol(out$identity), ncol(d$expr))
   # the reported score must match the winning row of the score matrix
-  expect_equal(out$labels$score, unname(apply(out$scores, 2, max)))
+  expect_equal(out$labels$score, unname(apply(out$identity, 2, max)))
 })
 
 test_that("margin is the gap between the best and second-best score", {
   d <- make_expr(n_cells = 12)
   out <- annotate_midbrain_cells(d$expr, seed = 42, return_scores = TRUE)
-  expected <- apply(out$scores, 2, function(col) {
+  expected <- apply(out$identity, 2, function(col) {
     s <- sort(col, decreasing = TRUE)
     s[1] - s[2]
   })

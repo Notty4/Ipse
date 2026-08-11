@@ -2,5 +2,6 @@
 
 export(annotate_midbrain_cells)
 export(list_midbrain_cell_types)
+export(list_state_sections)
 export(score_markers)
 importFrom(utils,globalVariables)

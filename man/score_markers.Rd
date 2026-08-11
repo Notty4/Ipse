@@ -7,6 +7,7 @@
 score_markers(
   expr,
   markers = midbrain_markers,
+  layer = "identity",
   method = c("zscore", "ucell", "control", "mean_weighted"),
   n_control = 100,
   n_bins = 25,
@@ -20,8 +21,13 @@ normalised (typically log-normalised) expression values. Row names must
 be gene symbols.}
 
 \item{markers}{A marker reference data frame with columns \code{cell_type},
-\code{gene}, and \code{weight} (see \link{midbrain_markers}). Defaults to the bundled
-midbrain reference.}
+\code{gene}, \code{weight}, and optionally \code{layer} and \code{context} (see
+\link{midbrain_markers}). Defaults to the bundled midbrain reference. A
+table without \code{layer}/\code{context} is treated as all-identity.}
+
+\item{layer}{Which marker layer(s) to score: \code{"identity"} (the default),
+\code{"effector"}, \code{"state"}, a vector of these, or \code{NULL} for all. See
+\link{midbrain_markers} for what the layers mean.}
 
 \item{method}{Scoring method: \code{"zscore"}, \code{"ucell"}, \code{"control"}, or
 \code{"mean_weighted"}. See Scoring methods.}

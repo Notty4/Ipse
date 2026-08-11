@@ -47,11 +47,15 @@ test_that("zscore scores DO depend on the other cells present", {
 })
 
 test_that("control method warns and degrades gracefully without a background pool", {
-  d <- make_expr(n_bg = 5)
-  expect_warning(
-    score_markers(d$expr, method = "control", seed = 42),
-    "control pool"
-  )
+  # A matrix containing nothing but the identity markers themselves leaves
+  # no genes to draw expression-matched controls from.
+  genes <- unique(midbrain_markers$gene[midbrain_markers$layer == "identity"])
+  set.seed(3)
+  expr <- matrix(stats::rpois(length(genes) * 20, 4), nrow = length(genes),
+                 dimnames = list(genes, paste0("cell", 1:20)))
+  expr <- log1p(expr)
+
+  expect_warning(score_markers(expr, method = "control", seed = 42), "control pool")
 })
 
 test_that("seed makes control scores reproducible", {

@@ -19,10 +19,5 @@ Useful links:
 \author{
 \strong{Maintainer}: Naz \email{you@example.com}
 
-Authors:
-\itemize{
-  \item Naz \email{you@example.com}
-}
-
 }
 \keyword{internal}
