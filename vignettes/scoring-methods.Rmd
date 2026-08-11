@@ -1,0 +1,101 @@
+---
+title: "Choosing a scoring method"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Choosing a scoring method}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+```{r setup}
+library(midbrainType)
+```
+
+## Why the method matters
+
+`score_markers()` offers four ways to turn marker expression into a
+per-cell-type score. On clean, well-separated data the choice barely
+matters — every method recovers the right answer. The differences appear
+when marker sets differ in **absolute abundance**, which is the normal
+case: `MBP` and `PLP1` are enormously expressed, `SLC6A3` is not.
+
+The four methods differ in what they normalise against:
+
+| method | normalises against | corrects abundance imbalance? | cells scored independently? |
+|---|---|---|---|
+| `mean_weighted` | nothing | no | yes |
+| `control` | expression-matched background genes | only additively — partially | yes |
+| `ucell` | other genes *within the same cell* | no | yes |
+| `zscore` | the same gene *across other cells* | yes | no |
+
+## A benchmark
+
+Two simulated scenarios, both with 2,000 background genes:
+
+- **clean** — markers are near-silent outside their own cell type
+- **spillover** — oligodendrocyte markers are constitutively abundant in
+  *every* cell, and dopaminergic markers are scarce. This mimics ambient RNA
+  and transcript spillover, which is a routine problem in imaging-based
+  spatial assays.
+
+Approximate accuracy against known ground truth:
+
+| method | clean | spillover |
+|---|---|---|
+| `mean_weighted` | 100% | ~17% |
+| `control` | 100% | ~17% |
+| `ucell` | 100% | ~17% |
+| `zscore` | 100% | ~46% |
+
+Two things are worth taking from this.
+
+**First, only `zscore` degrades gracefully.** The reason is structural: it
+is the only method that compares a gene against its own distribution across
+cells, which is what distinguishes "this gene is high here" from "this gene
+is high everywhere". Background subtraction (`control`) removes an additive
+offset but leaves the difference in dynamic range intact. Within-cell
+ranking (`ucell`) is defeated by a marker set that ranks top in every cell.
+This is why `zscore` is the default.
+
+**Second, and more importantly — no method rescues the spillover scenario.**
+Even the best falls below 50%. The scoring formula is not where this problem
+is solved. Marker curation and upstream handling of spillover matter more
+than the choice of score.
+
+## When to override the default
+
+Use `ucell` when you need scores that are comparable across separately
+processed batches or tiles, or when you want to score cells in chunks —
+`zscore` scores depend on which other cells are in the matrix, `ucell`
+scores do not:
+
+```{r independence, eval = FALSE}
+full   <- score_markers(expr, method = "ucell")
+subset <- score_markers(expr[, 1:10], method = "ucell")
+all.equal(full[, 1:10], subset)   # TRUE for ucell, FALSE for zscore
+```
+
+Also prefer `ucell` when your dataset is dominated by a single cell type, a
+case where z-scoring has little variation to work with.
+
+## Flagging uncertain calls
+
+Rather than forcing every cell into a category, use the two thresholds:
+
+```{r thresholds, eval = FALSE}
+labels <- annotate_midbrain_cells(
+  expr,
+  min_score  = 0,    # cell must beat its background -> else "Unassigned"
+  min_margin = 0.1   # top two types must be separated -> else "Ambiguous"
+)
+table(labels$cell_type)
+```
+
+Inspecting the `margin` column is often more informative than the label
+itself: a large population of low-margin cells usually means the marker set
+does not separate the types present in your data, which is a marker
+problem, not a threshold problem.

@@ -1,0 +1,31 @@
+Package: midbrainType
+Type: Package
+Title: Automated Cell Type Annotation for Midbrain Single-Cell and Spatial Data
+Version: 0.0.0.9000
+Authors@R: person("Naz", , , "you@example.com", role = c("aut", "cre"))
+Description: Assigns cell type labels to single-cell or spatial
+    transcriptomic data from the midbrain, using a curated marker gene
+    reference bundled inside the package. No external atlas or reference
+    download is required. Intended to be extended to further brain regions
+    over time; this release covers the midbrain only.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+Depends: R (>= 4.1.0)
+Imports:
+    Matrix,
+    methods,
+    stats,
+    utils
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    SingleCellExperiment,
+    SeuratObject
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+URL: https://github.com/Notty4/midbrainType
+BugReports: https://github.com/Notty4/midbrainType/issues
+Config/roxygen2/version: 8.1.0

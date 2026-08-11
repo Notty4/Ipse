@@ -1,0 +1,78 @@
+---
+title: "Getting started with midbrainType"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with midbrainType}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(midbrainType)
+```
+
+## What this package does
+
+`midbrainType` assigns a cell type label to each cell (or spot) in an
+expression matrix, using a marker gene reference bundled inside the
+package — no external atlas download required. This vignette walks through
+the basic workflow on a small simulated dataset; swap in your own
+`expr` matrix (genes x cells, gene symbols as row names) to use it for
+real.
+
+## A toy example
+
+```{r toy-data}
+set.seed(1)
+genes <- unique(midbrain_markers$gene)
+n_cells <- 20
+
+expr <- matrix(
+  rpois(length(genes) * n_cells, lambda = 3),
+  nrow = length(genes),
+  dimnames = list(genes, paste0("cell", seq_len(n_cells)))
+)
+
+# Simulate five clearly dopaminergic cells by boosting their markers
+da_genes <- midbrain_markers$gene[midbrain_markers$cell_type == "Dopaminergic neuron"]
+expr[da_genes, 1:5] <- expr[da_genes, 1:5] + 15
+```
+
+## Annotating cells
+
+```{r annotate}
+labels <- annotate_midbrain_cells(expr)
+table(labels$cell_type)
+head(labels)
+```
+
+## Looking at raw scores
+
+If you want the full cell-types x cells score matrix rather than hard
+labels:
+
+```{r scores}
+scores <- score_markers(expr)
+scores[, 1:5]
+```
+
+## What cell types are covered?
+
+```{r list-types}
+list_midbrain_cell_types()
+```
+
+## Next steps
+
+- Replace `data-raw/prepare_markers.R` with a curated marker list for your
+  use case
+- Try `annotate_midbrain_cells(expr, min_score = ...)` to flag
+  low-confidence calls as `"Unassigned"` instead of forcing every cell into
+  a category
