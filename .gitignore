@@ -4,4 +4,4 @@
 .Ruserdata
 *.Rproj
 inst/doc
-"data-raw/derived/" 
+data-raw/derived/
