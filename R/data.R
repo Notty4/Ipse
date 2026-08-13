@@ -77,3 +77,54 @@
 #' data(midbrain_da_subtypes)
 #' unique(midbrain_da_subtypes$cell_type)
 "midbrain_da_subtypes"
+
+#' Dopaminergic SOX6 / CALB1 axis reference
+#'
+#' A two-class reference separating the two major dopaminergic neuron
+#' families of the human substantia nigra. Use with [annotate_subtypes()]
+#' on cells already labelled `"Dopaminergic neuron"`.
+#'
+#' @section Why a two-class reference exists alongside the subtypes:
+#' [midbrain_da_subtypes] resolves nine populations at roughly 63%
+#' accuracy; this reference resolves the SOX6/CALB1 division at roughly
+#' 85%. Where the question concerns the major axis — as it does for the
+#' SOX6/AGTR1 population depleted in Parkinson's disease — the two-class
+#' call is the more honest instrument. Deriving the axis directly, rather
+#' than collapsing the nine-way call, avoids inheriting subtype errors.
+#'
+#' @section Operating characteristics:
+#' Measured on the cohort it was derived from, so treat as an upper bound:
+#'
+#' \itemize{
+#'   \item Sensitivity for SOX6 approximately 0.78; false-positive rate
+#'     approximately 0.09. SOX6 is the harder side — these populations
+#'     appear defined more by what they lack than what they express.
+#'   \item Measured proportions are **attenuated by roughly 0.70**. A true
+#'     10-percentage-point difference between groups appears as about 7.
+#'     Report measured differences as a floor, not an estimate.
+#'   \item Proportions are pulled toward a fixed point near 0.30: below it
+#'     they are overstated, above it understated. Do not quote a raw
+#'     percentage as an abundance estimate.
+#'   \item The bias cancels in a between-group comparison **only if
+#'     classification accuracy is equal in both groups**. If a condition
+#'     shifts cells toward weakly-marked states, it will not, and the
+#'     comparison becomes biased rather than merely attenuated. This
+#'     cannot be checked from control data.
+#' }
+#'
+#' Simulation with these characteristics gives 0.78 power to detect a
+#' 10-point shift with 8 donors per group and 500 dopaminergic cells each
+#' — against 0.82 with perfect classification. Donor count, not classifier
+#' accuracy, is the binding constraint: 9 donors per group for a 10-point
+#' shift, but 31 for a 5-point shift. See `data-raw/subtype_power.R`.
+#'
+#' @format A data frame with the same columns as [midbrain_markers].
+#'   All markers are in the `identity` layer.
+#'
+#' @source Control donors, human substantia nigra pars compacta; Kamath
+#'   et al. 2022, Broad Single Cell Portal SCP1768 / GEO GSE178265.
+#'
+#' @examples
+#' data(midbrain_da_axis)
+#' table(midbrain_da_axis$cell_type)
+"midbrain_da_axis"

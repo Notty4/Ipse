@@ -11,11 +11,25 @@ companion packages).
 
 ## Status
 
-Early skeleton (v0.0.0.9000). The bundled marker set in
-`data-raw/prepare_markers.R` is a starter list of canonical markers — not
-yet curated against a specific reference (e.g. the Agarwal midbrain atlas,
-GSE140231) or validated against real Xenium/spatial data. Treat calls as
-provisional until that curation pass happens.
+Development version (v0.0.0.9000), but the bundled reference is real.
+
+`midbrain_markers` covers ten midbrain lineages, derived from control
+donors in human substantia nigra pars compacta (Kamath et al. 2022, Broad
+SCP1768 / GEO GSE178265, 8 donors). `midbrain_da_subtypes` covers nine
+dopaminergic subtypes, derived within dopaminergic cells only.
+
+**Validation.** A marker set derived independently from a different cohort
+(Agarwal et al. 2020, GSE140231, 5 control donors) annotates the Kamath
+cells at 0.93 balanced accuracy across the six shared classes; the Kamath
+reference reaches 0.97 on the same cells. The small gap between those two
+numbers is the point — it says the markers generalise rather than
+memorising their source cohort.
+
+**Known weakness.** Excitatory neurons are the hardest class, at ~0.62
+recall. They compete mainly with inhibitory neurons, and neither has a
+strongly exclusive marker set. Everything else exceeds 0.89.
+
+Not yet validated on spatial data.
 
 ## Installation
 
@@ -70,6 +84,21 @@ against published work, instead of an opaque cluster index. Sections never
 influence the assigned label — that stays derived from identity markers
 alone, so annotation cannot encode condition status.
 
+### Resolving subtypes
+
+Dopaminergic neurons can be resolved into subtypes in a second pass:
+
+```r
+labels <- annotate_cells(expr)
+labels <- annotate_subtypes(expr, labels, parent = "Dopaminergic neuron")
+table(labels$subtype, useNA = "ifany")
+```
+
+Subtype scores are computed within the parent class only, so each subtype
+competes against its siblings rather than against glia. Expect smaller
+margins than at the lineage level — subtypes are genuinely similar, and a
+cluster of low-margin cells is a finding rather than noise.
+
 Cells can be flagged rather than forced into a call:
 
 ```r
@@ -80,15 +109,15 @@ labels <- annotate_cells(
 )
 ```
 
-### A caveat worth reading
+### Choosing a scoring method
 
-Benchmarking on simulated data showed that when marker sets differ in
-absolute abundance — which happens routinely via ambient RNA and transcript
-spillover in spatial assays — *every* scoring method degrades badly, and the
-best of them still lands under 50% accuracy. Only `zscore` degrades
-gracefully, which is why it is the default, but the honest conclusion is
-that the scoring formula is not where this problem gets solved. Marker
-curation matters more.
+Which method wins depends on your markers, not on the method. Across five
+glial classes with strong markers, `ucell` led and `zscore` trailed; across
+all ten classes — including the weakly-separated neuronal ones — the
+ordering reversed (`zscore` 0.90, `ucell` 0.83 balanced accuracy). The
+pattern is that z-scoring rescues classes with weak markers and costs a
+little on classes with strong ones, so it is the default. Run
+`benchmark_methods()` on your own data rather than trusting that.
 
 ## Deriving your own markers
 
@@ -139,10 +168,8 @@ Layer assignment is not automated: name your `effector` genes explicitly.
 
 ## Roadmap
 
-- Curate the marker set against a real reference (thesis / literature)
-  rather than the current canonical starter list — currently the highest-value
-  work, per the benchmark above
-- Validate on real Xenium/spatial data, not just simulated counts
+- Validate on real spatial data — the reference is derived and
+  cross-validated on single-nucleus data only
 - Handle ambient RNA / transcript spillover explicitly, rather than hoping
   the scoring method absorbs it
 - Extend beyond the midbrain to further regions

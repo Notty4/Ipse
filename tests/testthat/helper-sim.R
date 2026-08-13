@@ -105,3 +105,44 @@ make_reference <- function(n_per = 60, seed = 5) {
                        dimnames = list(genes, paste0("c", seq_along(labels)))))
   list(expr = expr, labels = labels, donors = donors, types = types)
 }
+
+#' A dataset with a parent class that splits into subtypes, plus two
+#' unrelated lineages. Returns matching broad and subtype marker tables.
+make_subtype_expr <- function(n_per = 120, seed = 21) {
+  set.seed(seed)
+  subs <- c("SubA", "SubB", "SubC")
+  others <- c("Glia1", "Glia2")
+  truth_sub <- c(rep(subs, each = n_per), rep(NA, length(others) * n_per))
+  truth_broad <- c(rep("Parent", length(subs) * n_per),
+                   rep(others, each = n_per))
+  n <- length(truth_broad)
+
+  parent_mk <- paste0("PARENT_", 1:6)
+  sub_mk <- unlist(lapply(subs, function(s) paste0(s, "_", 1:5)))
+  other_mk <- unlist(lapply(others, function(o) paste0(o, "_", 1:6)))
+  bg <- paste0("BG", 1:300)
+  all_genes <- c(parent_mk, sub_mk, other_mk, bg)
+
+  lam <- matrix(0.2, length(all_genes), n, dimnames = list(all_genes, paste0("c", 1:n)))
+  lam[bg, ] <- stats::runif(length(bg), 0.1, 2)
+  lam[parent_mk, truth_broad == "Parent"] <- 10
+  for (o in others) lam[paste0(o, "_", 1:6), truth_broad == o] <- 10
+  for (s in subs) lam[paste0(s, "_", 1:5), which(truth_sub == s)] <- 8
+
+  expr <- log1p(matrix(stats::rpois(length(lam), lam), nrow = nrow(lam),
+                       dimnames = dimnames(lam)))
+
+  mk_broad <- data.frame(
+    cell_type = c(rep("Parent", 6), rep(others, each = 6)),
+    gene = c(parent_mk, other_mk),
+    layer = "identity", context = "canonical",
+    source = NA_character_, weight = 1, stringsAsFactors = FALSE)
+
+  mk_sub <- data.frame(
+    cell_type = rep(subs, each = 5), gene = sub_mk,
+    layer = "identity", context = "canonical",
+    source = NA_character_, weight = 1, stringsAsFactors = FALSE)
+
+  list(expr = expr, truth_broad = truth_broad, truth_sub = truth_sub,
+       markers = mk_broad, subtype_markers = mk_sub)
+}

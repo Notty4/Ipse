@@ -5,4 +5,4 @@
 # `midbrain_markers` is a lazy-loaded package dataset used as a default
 # argument value. R CMD check's static analysis can't see that binding,
 # so declare it here to silence a spurious note.
-globalVariables("midbrain_markers")
+globalVariables(c("midbrain_markers", "midbrain_da_subtypes", "midbrain_da_axis"))
