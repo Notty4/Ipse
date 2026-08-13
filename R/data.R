@@ -46,3 +46,34 @@
 #' table(midbrain_markers$layer)
 #' subset(midbrain_markers, layer == "identity")
 "midbrain_markers"
+
+#' Dopaminergic neuron subtype marker reference
+#'
+#' Markers distinguishing dopaminergic neuron subtypes from one another,
+#' for use on cells already labelled `"Dopaminergic neuron"` by
+#' [annotate_cells()] with [midbrain_markers].
+#'
+#' @section Why this is separate:
+#' These markers were derived within dopaminergic cells only, so each
+#' subtype's strongest competitor is another subtype rather than a glial
+#' lineage. Deriving subtypes alongside lineages collapses their scores:
+#' every astrocyte subtype's nearest competitor is another astrocyte, and
+#' the resulting markers separate subtypes rather than identifying
+#' lineages. Judge the gaps here on a different scale to those in
+#' [midbrain_markers] — a detection gap of 0.2 between two dopaminergic
+#' populations is a stronger signal than 0.2 between a neuron and an
+#' oligodendrocyte.
+#'
+#' @format A data frame with the same columns as [midbrain_markers].
+#'   All markers are in the `identity` layer.
+#'
+#' @source Control donors, human substantia nigra pars compacta; Kamath
+#'   et al. 2022, Broad Single Cell Portal SCP1768 / GEO GSE178265. The
+#'   `CALB1_RBP4` subtype is absent: its candidates were housekeeping and
+#'   ribosomal genes, which is what a subtype looks like when it has no
+#'   distinguishing expression of its own.
+#'
+#' @examples
+#' data(midbrain_da_subtypes)
+#' unique(midbrain_da_subtypes$cell_type)
+"midbrain_da_subtypes"

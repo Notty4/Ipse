@@ -28,8 +28,14 @@ test_that("labels are decided by identity markers alone", {
   d <- make_expr()
   # Wildly inflating an effector marker of another lineage must not change
   # any label, since effector markers never contribute to assignment.
+  # Pick the gene from the loaded reference rather than hardcoding one --
+  # which reference is bundled changes as it is re-derived.
+  eff <- midbrain_markers$gene[midbrain_markers$layer == "effector"]
+  eff <- intersect(eff, rownames(d$expr))
+  skip_if(length(eff) == 0, "no effector markers in the bundled reference")
+
   altered <- d$expr
-  altered["MBP", ] <- altered["MBP", ] + 50
+  altered[eff[1], ] <- altered[eff[1], ] + 50
 
   a <- annotate_cells(d$expr, seed = 42)
   b <- annotate_cells(altered, seed = 42)
@@ -38,8 +44,12 @@ test_that("labels are decided by identity markers alone", {
 
 test_that("state markers never contribute to the assigned label", {
   d <- make_expr()
+  st <- midbrain_markers$gene[midbrain_markers$layer == "state"]
+  st <- intersect(st, rownames(d$expr))
+  skip_if(length(st) == 0, "no state markers in the bundled reference")
+
   altered <- d$expr
-  altered[c("GFAP", "VIM"), ] <- altered[c("GFAP", "VIM"), ] + 50
+  altered[st, ] <- altered[st, ] + 50
 
   a <- annotate_cells(d$expr, seed = 42)
   b <- annotate_cells(altered, seed = 42)

@@ -139,11 +139,11 @@ score_markers <- function(expr,
       # would otherwise fill every zero and densify the whole matrix.
       w_scaled <- weights / prep$sdev[genes]
       offset <- sum(w_scaled * prep$mu[genes])
-      scores[ct, ] <- as.numeric(crossprod(expr[genes, , drop = FALSE], w_scaled)) - offset
+      scores[ct, ] <- as.numeric(Matrix::crossprod(expr[genes, , drop = FALSE], w_scaled)) - offset
       next
     }
 
-    marker_score <- as.numeric(crossprod(expr[genes, , drop = FALSE], weights))
+    marker_score <- as.numeric(Matrix::crossprod(expr[genes, , drop = FALSE], weights))
 
     if (method == "control" && !is.null(prep$bins)) {
       control_genes <- .sample_control_genes(genes, prep$bins, prep$pool, n_control)
@@ -161,14 +161,35 @@ score_markers <- function(expr,
 
 #' Per-gene mean and standard deviation, computed without densifying
 #'
+#' Computed in column chunks. The obvious `rowMeans(expr * expr)` would
+#' materialise a second matrix the size of the first -- on a real dataset
+#' with hundreds of millions of non-zero entries that is several GB, and
+#' it fails on ordinary hardware. Chunking bounds the extra allocation to
+#' one chunk regardless of dataset size.
+#'
 #' Zero-variance genes get an sd of 1 and a mean of 0 so they contribute
 #' nothing rather than producing `NaN`.
 #' @keywords internal
 #' @noRd
-.gene_moments <- function(expr) {
-  mu <- Matrix::rowMeans(expr)
-  sq <- Matrix::rowMeans(expr * expr)
+.gene_moments <- function(expr, chunk = 5000L) {
   n <- ncol(expr)
+  total <- numeric(nrow(expr))
+  total_sq <- numeric(nrow(expr))
+
+  for (start in seq.int(1L, n, by = chunk)) {
+    end <- min(start + chunk - 1L, n)
+    sub <- expr[, start:end, drop = FALSE]
+    total <- total + Matrix::rowSums(sub)
+    if (methods::is(sub, "sparseMatrix")) {
+      sub@x <- sub@x^2
+    } else {
+      sub <- sub^2
+    }
+    total_sq <- total_sq + Matrix::rowSums(sub)
+  }
+
+  mu <- total / n
+  sq <- total_sq / n
   sdev <- sqrt(pmax(sq - mu^2, 0)) * sqrt(n / max(n - 1, 1))
 
   zero_var <- sdev < .Machine$double.eps
@@ -176,6 +197,54 @@ score_markers <- function(expr,
   mu[zero_var] <- 0
 
   list(mu = mu, sdev = sdev)
+}
+
+#' Rank genes within each cell, descending by expression
+#'
+#' Ranks only the non-zero entries, keeping the matrix sparse. Densifying
+#' first is not viable: a 40k x 80k matrix of doubles is ~26 GB. Since all
+#' zero entries would rank below every detected gene, and the count of
+#' detected genes per cell is typically near `max_rank`, zeros are treated
+#' as `max_rank + 1` when scoring, rather than stored.
+#' @keywords internal
+#' @noRd
+.rank_cells <- function(expr, max_rank) {
+  expr <- methods::as(expr, "CsparseMatrix")
+  p <- expr@p
+  new_x <- numeric(length(expr@x))
+
+  for (j in seq_len(ncol(expr))) {
+    lo <- p[j]; hi <- p[j + 1]
+    if (hi <= lo) next
+    idx <- (lo + 1L):hi
+    r <- rank(-expr@x[idx], ties.method = "average")
+    r[r > max_rank] <- max_rank + 1
+    new_x[idx] <- r
+  }
+
+  expr@x <- new_x
+  expr
+}
+
+#' Mann-Whitney U based enrichment score for one marker set
+#'
+#' Follows the UCell formulation: the U statistic of the marker ranks is
+#' normalised by its theoretical maximum, so scores lie in `[0, 1]` and are
+#' comparable across marker sets of different size *and* across cell types
+#' whose markers differ in absolute abundance.
+#' @keywords internal
+#' @noRd
+.ucell_score <- function(ranks, genes, max_rank) {
+  n <- length(genes)
+  # Only the marker rows are made dense -- a handful of genes by however
+  # many cells, rather than the whole matrix.
+  sub <- as.matrix(ranks[genes, , drop = FALSE])
+  # An absent entry means the gene was not detected in that cell, which
+  # ranks below every detected gene.
+  sub[sub == 0] <- max_rank + 1
+  rank_sum <- colSums(sub)
+  u <- rank_sum - n * (n + 1) / 2
+  1 - u / (n * max_rank)
 }
 
 #' Bin genes by mean expression to build a control gene pool
@@ -260,9 +329,6 @@ score_markers <- function(expr,
   if (!is.matrix(expr) && !methods::is(expr, "Matrix")) {
     stop("`expr` must be a matrix or Matrix (genes x cells).", call. = FALSE)
   }
-  if (is.null(rownames(expr))) {
-    stop("`expr` must have gene symbols as row names.", call. = FALSE)
-  }
   if (ncol(expr) == 0) {
     stop("`expr` has no cells (zero columns). If you subset by a label ",
          "vector, check that any cells passed the filter -- e.g. ",
@@ -270,6 +336,9 @@ score_markers <- function(expr,
   }
   if (nrow(expr) == 0) {
     stop("`expr` has no genes (zero rows).", call. = FALSE)
+  }
+  if (is.null(rownames(expr))) {
+    stop("`expr` must have gene symbols as row names.", call. = FALSE)
   }
   if (is.null(colnames(expr))) {
     stop("`expr` must have cell IDs as column names.", call. = FALSE)
@@ -319,39 +388,4 @@ score_markers <- function(expr,
          call. = FALSE)
   }
   out
-}
-
-#' Rank genes within each cell, descending by expression
-#'
-#' Genes falling below `max_rank` are collapsed to `max_rank + 1`, which
-#' both bounds the score and makes the computation robust to the long tail
-#' of lowly/zero-expressed genes typical of sparse spatial data.
-#' @keywords internal
-#' @noRd
-.rank_cells <- function(expr, max_rank) {
-  dense <- as.matrix(expr)
-  ranks <- apply(dense, 2, function(x) {
-    r <- rank(-x, ties.method = "average")
-    r[r > max_rank] <- max_rank + 1
-    r
-  })
-  rownames(ranks) <- rownames(dense)
-  colnames(ranks) <- colnames(dense)
-  ranks
-}
-
-#' Mann-Whitney U based enrichment score for one marker set
-#'
-#' Follows the UCell formulation: the U statistic of the marker ranks is
-#' normalised by its theoretical maximum, so scores lie in `[0, 1]` and are
-#' comparable across marker sets of different size *and* across cell types
-#' whose markers differ in absolute abundance.
-#' @keywords internal
-#' @noRd
-.ucell_score <- function(ranks, genes, max_rank) {
-  n <- length(genes)
-  sub <- ranks[genes, , drop = FALSE]
-  rank_sum <- colSums(sub)
-  u <- rank_sum - n * (n + 1) / 2
-  1 - u / (n * max_rank)
 }

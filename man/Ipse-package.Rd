@@ -19,5 +19,10 @@ Useful links:
 \author{
 \strong{Maintainer}: Harrison \email{harrisonnott.au@gmail.com}
 
+Authors:
+\itemize{
+  \item Harrison \email{harrisonnott.au@gmail.com}
+}
+
 }
 \keyword{internal}

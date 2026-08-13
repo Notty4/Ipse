@@ -18,7 +18,6 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
 Depends: R (>= 4.1.0)
 Imports:
     Matrix,
@@ -33,3 +32,4 @@ Config/testthat/edition: 3
 VignetteBuilder: knitr
 URL: https://github.com/Notty4/Ipse
 BugReports: https://github.com/Notty4/Ipse/issues
+Config/roxygen2/version: 8.1.0
